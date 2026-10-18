@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "Mi Trading",
+    "slug": "mi-trading",
+    "owner": "miguela175",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mitrading.app"
+    },
+    "extra": {
+      "eas": {
+        "projectId": ""
+      }
+    },
+    "android": {
+      "package": "com.mitrading.app",
+      "icon": "./assets/icon.png",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0B1220"
+      },
+      "permissions": ["INTERNET"]
+    },
+    "plugins": [
+      "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "backgroundColor": "#0B1220"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
+    ]
+  }
+}
