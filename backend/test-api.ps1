@@ -156,7 +156,7 @@ Check "Resumen: 3 ganadas / 1 perdida" ($summary.Body.data.trades.wins -eq 3 -an
 Check "Resumen: win rate 75%" ($summary.Body.data.trades.winRate -eq 75)
 Check "Resumen: profit factor 5.91" ($summary.Body.data.profitFactor -eq 5.91)
 Check "Resumen: equity 1354" ($summary.Body.data.capital.equity -eq 1354)
-Check "Resumen: LONG pnl 40 / SHORT pnl -11" ($summary.Body.data.long.pnl -eq 40 -and $summary.Body.data.short.pnl -eq -11)
+Check "Resumen: LONG pnl 65 / SHORT pnl -11" ($summary.Body.data.long.pnl -eq 65 -and $summary.Body.data.short.pnl -eq -11)
 Check "Resumen: mejor operación AAPL +30" ($summary.Body.data.best.symbol -eq "AAPL" -and $summary.Body.data.best.amount -eq 30)
 Check "Resumen: peor operación ETHUSDT -11" ($summary.Body.data.worst.symbol -eq "ETHUSDT")
 
