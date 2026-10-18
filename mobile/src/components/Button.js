@@ -1,46 +1,51 @@
 import React from 'react';
-import { Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
-import { colors, radius, spacing } from '../theme/colors';
+import { Text, StyleSheet, Pressable, ActivityIndicator, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { colors, gradients, radius, spacing, glow } from '../theme/colors';
 
-// Botón reutilizable con variantes
-export default function Button({
-  title,
-  onPress,
-  variant = 'primary',
-  disabled = false,
-  loading = false,
-  style,
-  textStyle,
-  children,
-}) {
-  const map = {
-    primary: { bg: colors.primary, border: 'transparent', text: '#052611' },
-    outline: { bg: 'transparent', border: colors.primary, text: colors.primary },
-    ghost: { bg: colors.surfaceAlt, border: colors.border, text: colors.text },
-    danger: { bg: colors.danger, border: 'transparent', text: colors.white },
-  };
-  const v = map[variant] || map.primary;
+/** Botón con gradiente para la acción principal. */
+export default function Button({ title, onPress, variant = 'primary', disabled = false, loading = false, style, textStyle, children }) {
+  const config = {
+    primary: { gradient: gradients.primary, text: '#03140C', border: 'transparent', shadow: colors.primary },
+    danger: { gradient: gradients.negative, text: '#1B0308', border: 'transparent', shadow: colors.danger },
+    ghost: { gradient: gradients.card, text: colors.text, border: colors.border },
+    outline: { gradient: null, text: colors.primary, border: colors.primary },
+  }[variant] || {};
+
+  const label = children || title;
 
   return (
     <Pressable
       onPress={disabled || loading ? undefined : onPress}
       disabled={disabled || loading}
-      android_ripple={{ color: 'rgba(255,255,255,0.15)' }}
+      android_ripple={{ color: 'rgba(255,255,255,0.14)' }}
       style={({ pressed }) => [
         styles.touch,
         {
-          backgroundColor: v.bg,
-          borderColor: v.border,
-          borderWidth: variant === 'outline' ? 1.5 : 0,
-          opacity: disabled ? 0.5 : pressed ? 0.85 : 1,
+          borderColor: config.border,
+          borderWidth: variant === 'outline' || variant === 'ghost' ? 1 : 0,
+          opacity: disabled ? 0.45 : pressed ? 0.9 : 1,
+          transform: [{ scale: pressed ? 0.985 : 1 }],
         },
+        variant === 'primary' || variant === 'danger' ? glow(config.shadow, 0.35, 16, 6) : null,
         style,
       ]}
     >
-      {loading ? (
-        <ActivityIndicator color={v.text} />
+      {config.gradient ? (
+        <LinearGradient
+          colors={config.gradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={StyleSheet.absoluteFill}
+        />
       ) : (
-        <Text style={[styles.text, { color: v.text }, textStyle]}>{children || title}</Text>
+        <View style={StyleSheet.absoluteFill} />
+      )}
+
+      {loading ? (
+        <ActivityIndicator color={config.text} />
+      ) : (
+        <Text style={[styles.text, { color: config.text }, textStyle]}>{label}</Text>
       )}
     </Pressable>
   );
@@ -53,6 +58,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
-  text: { fontSize: 16, fontWeight: '700' },
+  text: { fontSize: 15, fontWeight: '800', letterSpacing: 0.3 },
 });

@@ -1,13 +1,15 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 
+import ScreenBackground from '../../components/ScreenBackground';
 import Input from '../../components/Input';
-import Chip from '../../components/Chip';
+import Segmented from '../../components/Segmented';
 import Button from '../../components/Button';
-import Card from '../../components/Card';
 import Feedback from '../../components/Feedback';
 import { api } from '../../api/client';
-import { colors, spacing } from '../../theme/colors';
+import { colors, gradients, spacing, radius, type, glow } from '../../theme/colors';
 import { formatMoney, formatPct, colorForResult, parseNumber } from '../../lib/format';
 import { computeResultPreview } from '../../lib/calc';
 
@@ -22,6 +24,18 @@ function toIso(value) {
   if (!value) return null;
   const d = new Date(`${value}T12:00:00`);
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+function Section({ title, children }) {
+  return (
+    <View style={styles.section}>
+      <LinearGradient colors={gradients.card} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+      <View style={styles.sectionPadding}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {children}
+      </View>
+    </View>
+  );
 }
 
 export default function TradeFormScreen({ navigation, route }) {
@@ -64,7 +78,6 @@ export default function TradeFormScreen({ navigation, route }) {
 
   const submit = async () => {
     setError('');
-
     if (!symbol.trim()) return setError('Escribe el activo o par que operaste (ej: BTCUSDT)');
     if (!(Number(parseNumber(capital)) > 0)) return setError('El capital invertido debe ser mayor a 0');
     if (status === 'CLOSED' && !hasPrices && parseNumber(manualResult) === null) {
@@ -85,7 +98,6 @@ export default function TradeFormScreen({ navigation, route }) {
       strategy: strategy.trim(),
       notes: notes.trim(),
     };
-
     if (status === 'CLOSED' && !hasPrices) payload.resultAmount = parseNumber(manualResult);
 
     setSaving(true);
@@ -100,163 +112,197 @@ export default function TradeFormScreen({ navigation, route }) {
     }
   };
 
+  const tone = preview ? colorForResult(preview.amount) : colors.textMuted;
+
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Feedback type="error" message={error} />
-
-        <Card title="Operación">
-          <Input
-            label="Activo / par"
-            value={symbol}
-            onChangeText={(t) => setSymbol(t.toUpperCase())}
-            placeholder="BTCUSDT, ETHUSDT, AAPL..."
-            autoCapitalize="characters"
-          />
-
-          <Text style={styles.label}>Dirección</Text>
-          <View style={styles.rowWrap}>
-            <Chip label="LONG (compra)" tone="success" selected={direction === 'LONG'} onPress={() => setDirection('LONG')} />
-            <Chip label="SHORT (venta)" tone="danger" selected={direction === 'SHORT'} onPress={() => setDirection('SHORT')} />
-          </View>
-
-          <Text style={styles.label}>Estado</Text>
-          <View style={styles.rowWrap}>
-            <Chip label="Cerrada" selected={status === 'CLOSED'} onPress={() => setStatus('CLOSED')} />
-            <Chip label="Abierta" selected={status === 'OPEN'} onPress={() => setStatus('OPEN')} />
-          </View>
-
-          <View style={styles.rowFields}>
-            <View style={{ flex: 1 }}>
-              <Input
-                label="Capital invertido"
-                value={capital}
-                onChangeText={setCapital}
-                keyboardType="decimal-pad"
-                placeholder="100"
-                suffix="USDT"
-              />
-            </View>
-            <View style={{ width: spacing.md }} />
-            <View style={{ width: 110 }}>
-              <Input
-                label="Apalancamiento"
-                value={leverage}
-                onChangeText={setLeverage}
-                keyboardType="decimal-pad"
-                placeholder="1"
-                suffix="x"
-              />
-            </View>
-          </View>
-
-          <View style={styles.rowFields}>
-            <View style={{ flex: 1 }}>
-              <Input
-                label="Precio de entrada"
-                value={entryPrice}
-                onChangeText={setEntryPrice}
-                keyboardType="decimal-pad"
-                placeholder="Opcional"
-              />
-            </View>
-            <View style={{ width: spacing.md }} />
-            <View style={{ flex: 1 }}>
-              <Input
-                label="Precio de salida"
-                value={exitPrice}
-                onChangeText={setExitPrice}
-                keyboardType="decimal-pad"
-                placeholder={status === 'OPEN' ? '—' : 'Opcional'}
-                editable={status !== 'OPEN'}
-              />
-            </View>
-          </View>
-
-          <View style={styles.rowFields}>
-            <View style={{ flex: 1 }}>
-              <Input label="Comisiones" value={fees} onChangeText={setFees} keyboardType="decimal-pad" placeholder="0" suffix="USDT" />
-            </View>
-            <View style={{ width: spacing.md }} />
-            <View style={{ flex: 1 }}>
-              <Input label="Fecha de entrada" value={openedAt} onChangeText={setOpenedAt} placeholder="AAAA-MM-DD" hint="Formato 2026-03-15" />
-            </View>
-          </View>
+    <ScreenBackground>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <Feedback type="error" message={error} />
 
           {status === 'CLOSED' ? (
+            <View style={[styles.preview, glow(tone, 0.25, 22, 8)]}>
+              <LinearGradient
+                colors={preview ? (preview.amount >= 0 ? gradients.successCard : gradients.dangerCard) : gradients.card}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <Text style={styles.previewLabel}>Resultado estimado</Text>
+              {preview ? (
+                <>
+                  <Text style={[styles.previewValue, { color: tone }]}>{formatMoney(preview.amount, true)}</Text>
+                  <Text style={[styles.previewPct, { color: tone }]}>{formatPct(preview.pct)} sobre tu capital</Text>
+                </>
+              ) : (
+                <Text style={styles.previewHint}>
+                  Escribe los precios de entrada y salida (recomendado) o el resultado en dinero.
+                </Text>
+              )}
+            </View>
+          ) : (
+            <View style={[styles.preview, glow(colors.info, 0.2, 22, 8)]}>
+              <LinearGradient colors={gradients.card} style={StyleSheet.absoluteFill} />
+              <Text style={styles.previewLabel}>Operación abierta</Text>
+              <Text style={[styles.previewValue, { color: colors.info, fontSize: 22 }]}>En curso</Text>
+              <Text style={styles.previewHint}>Se calculará el resultado cuando la cierres.</Text>
+            </View>
+          )}
+
+          <Section title="Operación">
+            <Input
+              label="Activo / par"
+              value={symbol}
+              onChangeText={(t) => setSymbol(t.toUpperCase())}
+              placeholder="BTCUSDT, ETHUSDT, AAPL..."
+              autoCapitalize="characters"
+            />
+
+            <Text style={styles.label}>Dirección</Text>
+            <Segmented
+              value={direction}
+              onChange={setDirection}
+              options={[
+                { label: 'LONG', value: 'LONG' },
+                { label: 'SHORT', value: 'SHORT' },
+              ]}
+            />
+
+            <Text style={[styles.label, { marginTop: spacing.md }]}>Estado</Text>
+            <Segmented
+              value={status}
+              onChange={setStatus}
+              options={[
+                { label: 'Cerrada', value: 'CLOSED' },
+                { label: 'Abierta', value: 'OPEN' },
+              ]}
+            />
+          </Section>
+
+          <Section title="Capital y precios">
             <View style={styles.rowFields}>
               <View style={{ flex: 1 }}>
-                <Input label="Fecha de salida" value={closedAt} onChangeText={setClosedAt} placeholder="AAAA-MM-DD" />
+                <Input
+                  label="Capital invertido"
+                  value={capital}
+                  onChangeText={setCapital}
+                  keyboardType="decimal-pad"
+                  placeholder="100"
+                  suffix="USDT"
+                />
+              </View>
+              <View style={{ width: spacing.md }} />
+              <View style={{ width: 112 }}>
+                <Input
+                  label="Apalancam."
+                  value={leverage}
+                  onChangeText={setLeverage}
+                  keyboardType="decimal-pad"
+                  placeholder="1"
+                  suffix="x"
+                />
+              </View>
+            </View>
+
+            <View style={styles.rowFields}>
+              <View style={{ flex: 1 }}>
+                <Input label="Precio entrada" value={entryPrice} onChangeText={setEntryPrice} keyboardType="decimal-pad" placeholder="Opcional" />
               </View>
               <View style={{ width: spacing.md }} />
               <View style={{ flex: 1 }}>
-                {!hasPrices ? (
-                  <Input
-                    label="Resultado manual"
-                    value={manualResult}
-                    onChangeText={setManualResult}
-                    keyboardType="decimal-pad"
-                    placeholder="Ej: 25 o -10"
-                    suffix="USDT"
-                  />
-                ) : (
-                  <View />
-                )}
+                <Input
+                  label="Precio salida"
+                  value={exitPrice}
+                  onChangeText={setExitPrice}
+                  keyboardType="decimal-pad"
+                  placeholder={status === 'OPEN' ? '—' : 'Opcional'}
+                  editable={status !== 'OPEN'}
+                />
               </View>
             </View>
-          ) : null}
-        </Card>
 
-        {status === 'CLOSED' ? (
-          <Card title="Resultado calculado">
-            {preview ? (
-              <View>
-                <Text style={[styles.result, { color: colorForResult(preview.amount) }]}>
-                  {formatMoney(preview.amount, true)}
-                </Text>
-                <Text style={[styles.resultPct, { color: colorForResult(preview.amount) }]}>
-                  {formatPct(preview.pct)} sobre tu capital
-                </Text>
-                <Text style={styles.hint}>
-                  {hasPrices
-                    ? 'Calculado con precio de entrada/salida, apalancamiento y comisiones.'
-                    : 'Usando el resultado manual que escribiste.'}
-                </Text>
+            <View style={styles.rowFields}>
+              <View style={{ flex: 1 }}>
+                <Input label="Comisiones" value={fees} onChangeText={setFees} keyboardType="decimal-pad" placeholder="0" suffix="USDT" />
               </View>
-            ) : (
-              <Text style={styles.hint}>
-                Escribe precio de entrada y salida (recomendado) o el resultado en dinero para ver el cálculo.
-              </Text>
-            )}
-          </Card>
-        ) : null}
+              <View style={{ width: spacing.md }} />
+              <View style={{ flex: 1 }}>
+                <Input label="Fecha entrada" value={openedAt} onChangeText={setOpenedAt} placeholder="AAAA-MM-DD" hint="2026-03-15" />
+              </View>
+            </View>
 
-        <Card title="Detalles opcionales">
-          <Input label="Estrategia / setup" value={strategy} onChangeText={setStrategy} placeholder="Ej: ruptura, soporte, scalping" />
-          <Input
-            label="Notas"
-            value={notes}
-            onChangeText={setNotes}
-            placeholder="Qué hiciste bien o mal, emociones, plan..."
-            multiline
-            numberOfLines={4}
+            {status === 'CLOSED' ? (
+              <View style={styles.rowFields}>
+                <View style={{ flex: 1 }}>
+                  <Input label="Fecha salida" value={closedAt} onChangeText={setClosedAt} placeholder="AAAA-MM-DD" />
+                </View>
+                <View style={{ width: spacing.md }} />
+                {!hasPrices ? (
+                  <View style={{ flex: 1 }}>
+                    <Input
+                      label="Resultado manual"
+                      value={manualResult}
+                      onChangeText={setManualResult}
+                      keyboardType="decimal-pad"
+                      placeholder="25 o -10"
+                      suffix="USDT"
+                    />
+                  </View>
+                ) : (
+                  <View style={{ flex: 1 }} />
+                )}
+              </View>
+            ) : null}
+          </Section>
+
+          <Section title="Detalles opcionales">
+            <Input label="Estrategia / setup" value={strategy} onChangeText={setStrategy} placeholder="Ruptura, soporte, scalping..." />
+            <Input
+              label="Notas"
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="Qué hiciste bien o mal, emociones, plan..."
+              multiline
+              numberOfLines={4}
+            />
+          </Section>
+
+          <Button
+            title={editing ? 'Guardar cambios' : 'Registrar operación'}
+            onPress={submit}
+            loading={saving}
+            style={{ marginTop: spacing.xs }}
           />
-        </Card>
-
-        <Button title={editing ? 'Guardar cambios' : 'Registrar operación'} onPress={submit} loading={saving} />
-        <View style={{ height: spacing.xl }} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <View style={{ height: spacing.xl }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.md },
-  label: { color: colors.textMuted, fontSize: 13, fontWeight: '600', marginBottom: 6 },
-  rowWrap: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.sm },
+  preview: {
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    overflow: 'hidden',
+  },
+  previewLabel: { ...type.micro, color: colors.textMuted },
+  previewValue: { fontSize: 32, fontWeight: '800', marginTop: 6, fontVariant: ['tabular-nums'] },
+  previewPct: { fontSize: 13, fontWeight: '700', marginTop: 2, opacity: 0.9 },
+  previewHint: { color: colors.textMuted, fontSize: 12, marginTop: 8, lineHeight: 18 },
+  section: {
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.md,
+    overflow: 'hidden',
+  },
+  sectionPadding: { padding: spacing.md },
+  sectionTitle: { ...type.micro, color: colors.textMuted, marginBottom: spacing.md },
+  label: { ...type.micro, color: colors.textMuted, marginBottom: 7 },
   rowFields: { flexDirection: 'row' },
-  result: { fontSize: 30, fontWeight: '800' },
-  resultPct: { fontSize: 15, fontWeight: '700', marginTop: 2 },
-  hint: { color: colors.textMuted, fontSize: 12, marginTop: spacing.sm },
 });

@@ -13,7 +13,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": ""
+        "projectId": "d4bd8e3e-a58c-4bd0-8e8f-340b34e00f6f"
       }
     },
     "android": {
@@ -23,7 +23,9 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0B1220"
       },
-      "permissions": ["INTERNET"]
+      "permissions": [
+        "INTERNET"
+      ]
     },
     "plugins": [
       "expo-status-bar",

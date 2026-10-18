@@ -1,13 +1,15 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
-import Card from '../../components/Card';
+import ScreenBackground from '../../components/ScreenBackground';
 import EmptyState from '../../components/EmptyState';
 import Feedback from '../../components/Feedback';
+import FAB from '../../components/FAB';
 import { api } from '../../api/client';
-import { colors, spacing, radius } from '../../theme/colors';
+import { colors, gradients, spacing, radius, glow, type } from '../../theme/colors';
 import { formatMoney, formatDate } from '../../lib/format';
 
 export default function DepositsScreen({ navigation }) {
@@ -39,57 +41,68 @@ export default function DepositsScreen({ navigation }) {
   );
 
   const confirmDelete = (item) => {
-    Alert.alert('Eliminar movimiento', `¿Eliminar ${item.kind === 'WITHDRAWAL' ? 'retiro' : 'aporte'} de ${formatMoney(item.amount)}?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await api.del(`/deposits/${item._id}`);
-            load(true);
-          } catch (err) {
-            setError(err.message);
-          }
+    Alert.alert(
+      'Eliminar movimiento',
+      `¿Eliminar ${item.kind === 'WITHDRAWAL' ? 'retiro' : 'aporte'} de ${formatMoney(item.amount)}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.del(`/deposits/${item._id}`);
+              load(true);
+            } catch (err) {
+              setError(err.message);
+            }
+          },
         },
-      },
-    ]);
-  };
-
-  const summary = totals || {
-    deposited: deposits.filter((d) => d.kind !== 'WITHDRAWAL').reduce((a, d) => a + d.amount, 0),
-    withdrawn: deposits.filter((d) => d.kind === 'WITHDRAWAL').reduce((a, d) => a + d.amount, 0),
-    net: 0,
+      ]
+    );
   };
 
   return (
-    <View style={styles.screen}>
+    <ScreenBackground>
       <FlatList
         data={deposits}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor={colors.primary} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              load(true);
+            }}
+            tintColor={colors.primary}
+          />
         }
         ListHeaderComponent={
           <View>
             <Feedback type="error" message={error} />
-            <Card title="Resumen de capital">
-              <View style={styles.rowBetween}>
-                <View>
-                  <Text style={styles.label}>Aportado</Text>
-                  <Text style={[styles.value, { color: colors.success }]}>{formatMoney(summary.deposited)}</Text>
+
+            <View style={[styles.hero, glow(colors.primary, 0.22, 22, 8)]}>
+              <LinearGradient colors={gradients.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+              <Text style={styles.heroLabel}>Capital neto aportado</Text>
+              <Text style={styles.heroValue}>{formatMoney(totals.net)}</Text>
+
+              <View style={styles.heroRow}>
+                <View style={styles.heroStat}>
+                  <Ionicons name="arrow-down-circle-outline" size={16} color={colors.success} />
+                  <Text style={styles.heroStatLabel}>Aportado</Text>
+                  <Text style={[styles.heroStatValue, { color: colors.success }]}>{formatMoney(totals.deposited)}</Text>
                 </View>
-                <View>
-                  <Text style={styles.label}>Retirado</Text>
-                  <Text style={[styles.value, { color: colors.danger }]}>{formatMoney(summary.withdrawn)}</Text>
-                </View>
-                <View>
-                  <Text style={styles.label}>Capital neto</Text>
-                  <Text style={styles.value}>{formatMoney(summary.net)}</Text>
+                <View style={styles.heroStatDivider} />
+                <View style={styles.heroStat}>
+                  <Ionicons name="arrow-up-circle-outline" size={16} color={colors.danger} />
+                  <Text style={styles.heroStatLabel}>Retirado</Text>
+                  <Text style={[styles.heroStatValue, { color: colors.danger }]}>{formatMoney(totals.withdrawn)}</Text>
                 </View>
               </View>
-            </Card>
+            </View>
+
             <Text style={styles.sectionTitle}>Movimientos</Text>
           </View>
         }
@@ -106,20 +119,21 @@ export default function DepositsScreen({ navigation }) {
         }
         renderItem={({ item }) => {
           const isWithdrawal = item.kind === 'WITHDRAWAL';
+          const accent = isWithdrawal ? colors.danger : colors.success;
+
           return (
             <Pressable
               style={styles.item}
               onPress={() => navigation.navigate('DepositForm', { deposit: item })}
               onLongPress={() => confirmDelete(item)}
-              android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
+              android_ripple={{ color: 'rgba(255,255,255,0.05)' }}
             >
-              <View style={styles.iconWrap}>
-                <Ionicons
-                  name={isWithdrawal ? 'arrow-up-circle-outline' : 'arrow-down-circle-outline'}
-                  size={26}
-                  color={isWithdrawal ? colors.danger : colors.success}
-                />
+              <LinearGradient colors={gradients.card} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+
+              <View style={[styles.iconWrap, { backgroundColor: `${accent}1E`, borderColor: `${accent}55` }]}>
+                <Ionicons name={isWithdrawal ? 'arrow-up' : 'arrow-down'} size={16} color={accent} />
               </View>
+
               <View style={{ flex: 1, marginLeft: spacing.md }}>
                 <Text style={styles.itemTitle}>{isWithdrawal ? 'Retiro' : 'Aporte'}</Text>
                 <Text style={styles.meta}>
@@ -127,7 +141,8 @@ export default function DepositsScreen({ navigation }) {
                   {item.note ? ` · ${item.note}` : ''}
                 </Text>
               </View>
-              <Text style={[styles.amount, { color: isWithdrawal ? colors.danger : colors.success }]}>
+
+              <Text style={[styles.amount, { color: accent }]}>
                 {isWithdrawal ? '-' : '+'}
                 {formatMoney(item.amount)}
               </Text>
@@ -136,45 +151,50 @@ export default function DepositsScreen({ navigation }) {
         }}
       />
 
-      <Pressable style={styles.fab} onPress={() => navigation.navigate('DepositForm', {})}>
-        <Ionicons name="add" size={30} color="#052611" />
-      </Pressable>
-    </View>
+      <FAB onPress={() => navigation.navigate('DepositForm', {})} />
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
-  list: { padding: spacing.md, paddingBottom: 96 },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between' },
-  label: { color: colors.textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
-  value: { color: colors.text, fontSize: 17, fontWeight: '800', marginTop: 4 },
-  sectionTitle: { color: colors.textMuted, fontSize: 12, fontWeight: '800', letterSpacing: 1, marginBottom: spacing.sm },
+  list: { padding: spacing.md, paddingBottom: 110 },
+  hero: {
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    padding: spacing.md + 2,
+    marginBottom: spacing.md,
+    overflow: 'hidden',
+  },
+  heroLabel: { ...type.micro, color: colors.textMuted },
+  heroValue: { ...type.hero, fontSize: 32, color: colors.text, marginTop: spacing.sm },
+  heroRow: { flexDirection: 'row', marginTop: spacing.md, alignItems: 'center' },
+  heroStat: { flex: 1 },
+  heroStatDivider: { width: 1, height: 34, backgroundColor: colors.border, marginHorizontal: spacing.md },
+  heroStatLabel: { ...type.micro, color: colors.textDim, marginTop: 4 },
+  heroStatValue: { fontSize: 14, fontWeight: '800', marginTop: 3, fontVariant: ['tabular-nums'] },
+  sectionTitle: { ...type.micro, color: colors.textMuted, marginBottom: spacing.sm + 2 },
   loading: { color: colors.textMuted, textAlign: 'center', marginTop: spacing.lg },
   item: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
-    marginBottom: spacing.sm + 2,
+    marginBottom: spacing.sm + 4,
+    overflow: 'hidden',
+    ...glow('#000000', 0.35, 14, 4),
   },
-  iconWrap: { width: 34, alignItems: 'center' },
-  itemTitle: { color: colors.text, fontSize: 15, fontWeight: '700' },
-  meta: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
-  amount: { fontSize: 15, fontWeight: '800' },
-  fab: {
-    position: 'absolute',
-    right: spacing.md,
-    bottom: spacing.lg,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.primary,
+  iconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 6,
+    borderWidth: 1,
   },
+  itemTitle: { color: colors.text, fontSize: 15, fontWeight: '800' },
+  meta: { color: colors.textDim, fontSize: 11, marginTop: 3, fontWeight: '600' },
+  amount: { fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'] },
 });

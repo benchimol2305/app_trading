@@ -1,13 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing } from '../theme/colors';
+import { colors, spacing, radius } from '../theme/colors';
 
-// Mensaje para listas vacías
+/** Estado vacío con ícono dentro de un halo. */
 export default function EmptyState({ icon = 'analytics-outline', title, message }) {
   return (
     <View style={styles.wrap}>
-      <Ionicons name={icon} size={42} color={colors.textMuted} />
+      <View style={styles.halo}>
+        <Ionicons name={icon} size={30} color={colors.primary} />
+      </View>
       {title ? <Text style={styles.title}>{title}</Text> : null}
       {message ? <Text style={styles.message}>{message}</Text> : null}
     </View>
@@ -15,7 +17,22 @@ export default function EmptyState({ icon = 'analytics-outline', title, message 
 }
 
 const styles = StyleSheet.create({
-  wrap: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xl * 1.5, paddingHorizontal: spacing.lg },
-  title: { color: colors.text, fontWeight: '700', fontSize: 16, marginTop: spacing.sm + 2, textAlign: 'center' },
-  message: { color: colors.textMuted, fontSize: 13, marginTop: 6, textAlign: 'center' },
+  wrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xl * 1.4,
+    paddingHorizontal: spacing.lg,
+  },
+  halo: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.round,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: 'rgba(45,224,138,0.28)',
+  },
+  title: { color: colors.text, fontWeight: '800', fontSize: 16, marginTop: spacing.md, textAlign: 'center' },
+  message: { color: colors.textMuted, fontSize: 13, marginTop: 6, textAlign: 'center', lineHeight: 19 },
 });

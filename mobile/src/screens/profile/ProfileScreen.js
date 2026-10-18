@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
-import Card from '../../components/Card';
+import ScreenBackground from '../../components/ScreenBackground';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import Feedback from '../../components/Feedback';
 import { useAuth } from '../../context/AuthContext';
 import { BASE_URL } from '../../api/client';
-import { colors, spacing, radius } from '../../theme/colors';
+import { colors, gradients, spacing, radius, type, glow } from '../../theme/colors';
 
 export default function ProfileScreen() {
   const { user, updateProfile, signOut, deleteAccount } = useAuth();
@@ -68,66 +69,99 @@ export default function ProfileScreen() {
     );
   };
 
+  const initials = (user?.name || '?')
+    .split(' ')
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <View style={styles.avatar}>
-        <Ionicons name="person" size={34} color={colors.primary} />
-      </View>
-      <Text style={styles.name}>{user?.name}</Text>
-      <Text style={styles.email}>{user?.email}</Text>
+    <ScreenBackground>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.avatarWrap}>
+          <LinearGradient colors={gradients.primary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.avatar}>
+            <Text style={styles.initials}>{initials}</Text>
+          </LinearGradient>
+        </View>
 
-      <Card title="Editar mis datos">
-        <Feedback type="error" message={error} />
-        {message ? <Feedback type="success" message={message} /> : null}
+        <Text style={styles.name}>{user?.name}</Text>
+        <Text style={styles.email}>{user?.email}</Text>
 
-        <Input label="Nombre" value={name} onChangeText={setName} placeholder="Tu nombre" />
-        <Input
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          placeholder="tucorreo@ejemplo.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        <Input
-          label="Nueva contraseña (opcional)"
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Dejar vacío para no cambiarla"
-          secureTextEntry
-        />
+        <View style={styles.section}>
+          <LinearGradient colors={gradients.card} style={StyleSheet.absoluteFill} />
+          <View style={styles.sectionPadding}>
+            <Text style={styles.sectionTitle}>Editar mis datos</Text>
+            <Feedback type="error" message={error} />
+            {message ? <Feedback type="success" message={message} /> : null}
 
-        <Button title="Guardar cambios" onPress={save} loading={saving} />
-      </Card>
+            <Input label="Nombre" value={name} onChangeText={setName} placeholder="Tu nombre" />
+            <Input
+              label="Email"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="tucorreo@ejemplo.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <Input
+              label="Nueva contraseña (opcional)"
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Dejar vacío para no cambiarla"
+              secureTextEntry
+            />
 
-      <Card title="Sesión">
-        <Button title="Cerrar sesión" variant="ghost" onPress={confirmSignOut} />
-        <View style={{ height: spacing.sm }} />
-        <Button title="Eliminar mi cuenta" variant="danger" onPress={confirmDelete} />
-      </Card>
+            <Button title="Guardar cambios" onPress={save} loading={saving} />
+          </View>
+        </View>
 
-      <Text style={styles.footer}>Mi Trading · Diario de operaciones</Text>
-      <Text style={styles.footerSmall}>Servidor: {BASE_URL}</Text>
-      <View style={{ height: spacing.xl }} />
-    </ScrollView>
+        <View style={styles.section}>
+          <LinearGradient colors={gradients.card} style={StyleSheet.absoluteFill} />
+          <View style={styles.sectionPadding}>
+            <Text style={styles.sectionTitle}>Sesión</Text>
+            <Button title="Cerrar sesión" variant="ghost" onPress={confirmSignOut} />
+            <View style={{ height: spacing.sm }} />
+            <Button title="Eliminar mi cuenta" variant="danger" onPress={confirmDelete} />
+          </View>
+        </View>
+
+        <View style={styles.info}>
+          <Ionicons name="pulse-outline" size={13} color={colors.textDim} />
+          <Text style={styles.infoText}>Servidor: {BASE_URL}</Text>
+        </View>
+        <Text style={styles.footer}>MI TRADING · v1.0.0</Text>
+        <View style={{ height: 110 }} />
+      </ScrollView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.md },
+  content: { padding: spacing.md, alignItems: 'stretch' },
+  avatarWrap: { alignSelf: 'center', borderRadius: radius.round, marginTop: spacing.md, ...glow(colors.primary, 0.4, 24, 10) },
   avatar: {
-    alignSelf: 'center',
-    width: 76,
-    height: 76,
-    borderRadius: radius.round,
-    backgroundColor: colors.primarySoft,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
-  name: { color: colors.text, fontSize: 20, fontWeight: '800', textAlign: 'center', marginTop: spacing.sm },
-  email: { color: colors.textMuted, fontSize: 13, textAlign: 'center', marginBottom: spacing.lg },
-  footer: { color: colors.textMuted, textAlign: 'center', fontSize: 12, marginTop: spacing.md },
-  footerSmall: { color: colors.border, textAlign: 'center', fontSize: 10, marginTop: 4 },
+  initials: { color: '#03140C', fontSize: 28, fontWeight: '800', letterSpacing: 1 },
+  name: { color: colors.text, fontSize: 20, fontWeight: '800', textAlign: 'center', marginTop: spacing.md },
+  email: { color: colors.textMuted, fontSize: 12, textAlign: 'center', marginBottom: spacing.lg },
+  section: {
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.md,
+    overflow: 'hidden',
+  },
+  sectionPadding: { padding: spacing.md },
+  sectionTitle: { ...type.micro, color: colors.textMuted, marginBottom: spacing.md },
+  info: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm },
+  infoText: { color: colors.textDim, fontSize: 10, marginLeft: 5 },
+  footer: { color: colors.textDim, textAlign: 'center', fontSize: 10, marginTop: 8, letterSpacing: 1.2, fontWeight: '700' },
 });

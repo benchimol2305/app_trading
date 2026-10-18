@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // URL del backend público (Render). Se actualiza tras desplegar.
-const PROD_API_URL = 'https://trading-backend.onrender.com/api';
+const PROD_API_URL = 'https://trading-backend-i2xr.onrender.com/api';
 
 function resolveHost() {
   const raw =

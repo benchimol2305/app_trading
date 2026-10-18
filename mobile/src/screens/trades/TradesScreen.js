@@ -1,14 +1,17 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
+import ScreenBackground from '../../components/ScreenBackground';
 import Chip from '../../components/Chip';
 import Input from '../../components/Input';
 import EmptyState from '../../components/EmptyState';
 import Feedback from '../../components/Feedback';
+import FAB from '../../components/FAB';
 import { api } from '../../api/client';
-import { colors, spacing, radius } from '../../theme/colors';
+import { colors, gradients, spacing, radius, glow, type } from '../../theme/colors';
 import { formatMoney, formatPct, formatDate, colorForResult } from '../../lib/format';
 
 export default function TradesScreen({ navigation }) {
@@ -30,8 +33,7 @@ export default function TradesScreen({ navigation }) {
         if (direction !== 'all') params.push(`direction=${direction}`);
         if (symbol.trim()) params.push(`symbol=${encodeURIComponent(symbol.trim())}`);
         const query = params.length ? `?${params.join('&')}` : '';
-        const data = await api.get(`/trades${query}`);
-        setTrades(data);
+        setTrades(await api.get(`/trades${query}`));
       } catch (err) {
         setError(err.message);
       } finally {
@@ -61,14 +63,15 @@ export default function TradesScreen({ navigation }) {
   );
 
   return (
-    <View style={styles.screen}>
+    <ScreenBackground>
       <View style={styles.filters}>
         <Input
           value={symbol}
           onChangeText={setSymbol}
-          placeholder="Buscar por activo (BTC, ETH, AAPL...)"
+          placeholder="Buscar activo: BTC, ETH, AAPL..."
           style={styles.search}
         />
+
         <View style={styles.chipRow}>
           {[
             { label: 'Todas', value: 'all' },
@@ -93,10 +96,10 @@ export default function TradesScreen({ navigation }) {
         </View>
 
         <View style={styles.summary}>
-          <Text style={styles.summaryText}>{trades.length} operaciones</Text>
-          <Text style={[styles.summaryPnl, { color: colorForResult(totals.pnl) }]}>
-            {formatMoney(totals.pnl, true)}
+          <Text style={styles.summaryText}>
+            {trades.length} operaciones · {totals.wins}G / {totals.losses}P
           </Text>
+          <Text style={[styles.summaryPnl, { color: colorForResult(totals.pnl) }]}>{formatMoney(totals.pnl, true)}</Text>
         </View>
       </View>
 
@@ -104,8 +107,16 @@ export default function TradesScreen({ navigation }) {
         data={trades}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor={colors.primary} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              load(true);
+            }}
+            tintColor={colors.primary}
+          />
         }
         ListHeaderComponent={<Feedback type="error" message={error} />}
         ListEmptyComponent={
@@ -115,122 +126,116 @@ export default function TradesScreen({ navigation }) {
             <EmptyState
               icon="swap-vertical-outline"
               title="No hay operaciones"
-              message="Registra tu primera operación con el botón + e irán apareciendo aquí."
+              message="Registra tu primera operación con el botón + y aparecerán aquí con su resultado."
             />
           )
         }
         renderItem={({ item }) => {
-          const win = Number(item.resultAmount) > 0;
-          const loss = Number(item.resultAmount) < 0;
+          const closed = item.status === 'CLOSED';
+          const tone = colorForResult(item.resultAmount);
+          const isShort = item.direction === 'SHORT';
+          const accent = isShort ? colors.warning : colors.primary;
+
           return (
             <Pressable
               style={styles.item}
               onPress={() => navigation.navigate('TradeDetail', { id: item._id })}
-              android_ripple={{ color: 'rgba(255,255,255,0.06)' }}
+              android_ripple={{ color: 'rgba(255,255,255,0.05)' }}
             >
-              <View style={styles.itemTop}>
-                <View style={styles.itemLeft}>
-                  <View style={[styles.dirBadge, { backgroundColor: item.direction === 'SHORT' ? colors.warning : colors.primary }]}>
-                    <Text style={styles.dirText}>{item.direction}</Text>
-                  </View>
-                  <Text style={styles.symbol}>{item.symbol}</Text>
-                  {item.status === 'OPEN' ? (
-                    <View style={styles.openBadge}>
-                      <Text style={styles.openText}>ABIERTA</Text>
+              <LinearGradient colors={gradients.card} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+              <View style={[styles.accent, { backgroundColor: accent }]} />
+
+              <View style={styles.itemContent}>
+                <View style={styles.itemTop}>
+                  <View style={styles.itemLeft}>
+                    <View style={[styles.dirBadge, { backgroundColor: `${accent}22`, borderColor: `${accent}66` }]}>
+                      <Text style={[styles.dirText, { color: accent }]}>{item.direction}</Text>
                     </View>
-                  ) : null}
+                    <Text style={styles.symbol}>{item.symbol}</Text>
+                    {!closed ? (
+                      <View style={styles.openBadge}>
+                        <Text style={styles.openText}>ABIERTA</Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  <View style={{ alignItems: 'flex-end' }}>
+                    {closed ? (
+                      <>
+                        <Text style={[styles.result, { color: tone }]}>{formatMoney(item.resultAmount, true)}</Text>
+                        <Text style={[styles.resultPct, { color: tone }]}>{formatPct(item.resultPct)}</Text>
+                      </>
+                    ) : (
+                      <Text style={styles.pending}>En curso</Text>
+                    )}
+                  </View>
                 </View>
 
-                <View style={{ alignItems: 'flex-end' }}>
-                  {item.status === 'OPEN' ? (
-                    <Text style={styles.pending}>En curso</Text>
-                  ) : (
-                    <>
-                      <Text style={[styles.result, { color: colorForResult(item.resultAmount) }]}>
-                        {formatMoney(item.resultAmount, true)}
-                      </Text>
-                      <Text style={[styles.resultPct, { color: colorForResult(item.resultAmount) }]}>
-                        {formatPct(item.resultPct)}
-                      </Text>
-                    </>
-                  )}
+                <View style={styles.itemBottom}>
+                  <Text style={styles.meta}>{formatDate(item.closedAt || item.openedAt)}</Text>
+                  <Text style={styles.meta}>
+                    {formatMoney(item.capital)}
+                    {Number(item.leverage) > 1 ? ` · x${item.leverage}` : ''}
+                  </Text>
                 </View>
               </View>
 
-              <View style={styles.itemBottom}>
-                <Text style={styles.meta}>{formatDate(item.closedAt || item.openedAt)}</Text>
-                <Text style={styles.meta}>
-                  Capital {formatMoney(item.capital)}
-                  {Number(item.leverage) > 1 ? ` · x${item.leverage}` : ''}
-                  {win || loss ? '' : ''}
-                </Text>
-              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textDim} style={{ marginLeft: spacing.sm }} />
             </Pressable>
           );
         }}
       />
 
-      <Pressable style={styles.fab} onPress={() => navigation.navigate('TradeForm', {})}>
-        <Ionicons name="add" size={30} color="#052611" />
-      </Pressable>
-    </View>
+      <FAB onPress={() => navigation.navigate('TradeForm', {})} />
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
-  filters: { paddingHorizontal: spacing.md, paddingTop: spacing.md, backgroundColor: colors.background },
-  search: { marginBottom: spacing.sm },
+  filters: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
+  search: { marginBottom: spacing.sm - 2 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' },
   chipSeparator: { width: spacing.sm },
   summary: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.sm + 2,
   },
-  summaryText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
-  summaryPnl: { fontSize: 16, fontWeight: '800' },
-  list: { padding: spacing.md, paddingBottom: 96 },
+  summaryText: { color: colors.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
+  summaryPnl: { fontSize: 16, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  list: { paddingHorizontal: spacing.md, paddingBottom: 110 },
   loading: { color: colors.textMuted, textAlign: 'center', marginTop: spacing.lg },
   item: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.md,
-    marginBottom: spacing.sm + 2,
+    marginBottom: spacing.sm + 4,
+    overflow: 'hidden',
+    ...glow('#000000', 0.35, 14, 4),
   },
+  accent: { width: 3, alignSelf: 'stretch' },
+  itemContent: { flex: 1, padding: spacing.md },
   itemTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   itemLeft: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
-  dirBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginRight: spacing.sm },
-  dirText: { color: '#052611', fontWeight: '800', fontSize: 10 },
-  symbol: { color: colors.text, fontWeight: '800', fontSize: 16 },
+  dirBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 7, marginRight: spacing.sm, borderWidth: 1 },
+  dirText: { fontWeight: '800', fontSize: 10, letterSpacing: 0.5 },
+  symbol: { color: colors.text, fontWeight: '800', fontSize: 16, letterSpacing: 0.2 },
   openBadge: {
     marginLeft: spacing.sm,
-    paddingHorizontal: 8,
+    paddingHorizontal: 7,
     paddingVertical: 3,
-    borderRadius: 6,
-    backgroundColor: colors.surfaceAlt,
+    borderRadius: 7,
     borderWidth: 1,
-    borderColor: colors.info,
+    borderColor: `${colors.info}66`,
+    backgroundColor: `${colors.info}18`,
   },
-  openText: { color: colors.info, fontWeight: '700', fontSize: 10 },
-  result: { fontSize: 16, fontWeight: '800' },
-  resultPct: { fontSize: 12, fontWeight: '700' },
-  pending: { color: colors.info, fontWeight: '700', fontSize: 13 },
-  itemBottom: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.sm },
-  meta: { color: colors.textMuted, fontSize: 12 },
-  fab: {
-    position: 'absolute',
-    right: spacing.md,
-    bottom: spacing.lg,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 6,
-  },
+  openText: { color: colors.info, fontWeight: '800', fontSize: 9, letterSpacing: 0.6 },
+  result: { fontSize: 16, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  resultPct: { fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  pending: { color: colors.info, fontWeight: '800', fontSize: 13 },
+  itemBottom: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.sm + 2 },
+  meta: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
 });

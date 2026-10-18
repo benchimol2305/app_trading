@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
+import ScreenBackground from '../../components/ScreenBackground';
 import Input from '../../components/Input';
-import Chip from '../../components/Chip';
-import Card from '../../components/Card';
+import Segmented from '../../components/Segmented';
 import Button from '../../components/Button';
 import Feedback from '../../components/Feedback';
 import { api } from '../../api/client';
-import { colors, spacing } from '../../theme/colors';
+import { colors, gradients, spacing, radius, type } from '../../theme/colors';
 import { parseNumber } from '../../lib/format';
 
 function toDateInput(value) {
@@ -70,53 +71,67 @@ export default function DepositFormScreen({ navigation, route }) {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Feedback type="error" message={error} />
+    <ScreenBackground>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <Feedback type="error" message={error} />
 
-        <Card title="Movimiento de capital">
-          <Text style={styles.label}>Tipo</Text>
-          <View style={styles.rowWrap}>
-            <Chip label="Aporte (meto dinero)" tone="success" selected={kind === 'DEPOSIT'} onPress={() => setKind('DEPOSIT')} />
-            <Chip label="Retiro (saco dinero)" tone="danger" selected={kind === 'WITHDRAWAL'} onPress={() => setKind('WITHDRAWAL')} />
+          <View style={styles.section}>
+            <LinearGradient colors={gradients.card} style={StyleSheet.absoluteFill} />
+            <View style={styles.sectionPadding}>
+              <Text style={styles.sectionTitle}>Movimiento de capital</Text>
+
+              <Text style={styles.label}>Tipo</Text>
+              <Segmented
+                value={kind}
+                onChange={setKind}
+                options={[
+                  { label: 'Aporte', value: 'DEPOSIT' },
+                  { label: 'Retiro', value: 'WITHDRAWAL' },
+                ]}
+              />
+
+              <View style={{ height: spacing.md }} />
+
+              <Input
+                label="Monto"
+                value={amount}
+                onChangeText={setAmount}
+                keyboardType="decimal-pad"
+                placeholder="1000"
+                suffix="USDT"
+              />
+              <Input label="Fecha" value={depositedAt} onChangeText={setDepositedAt} placeholder="AAAA-MM-DD" hint="2026-03-15" />
+              <Input label="Nota (opcional)" value={note} onChangeText={setNote} placeholder="Aporte mensual, retiro de ganancias..." />
+            </View>
           </View>
 
-          <Input
-            label="Monto"
-            value={amount}
-            onChangeText={setAmount}
-            keyboardType="decimal-pad"
-            placeholder="1000"
-            suffix="USDT"
-          />
-          <Input
-            label="Fecha"
-            value={depositedAt}
-            onChangeText={setDepositedAt}
-            placeholder="AAAA-MM-DD"
-            hint="Formato 2026-03-15"
-          />
-          <Input label="Nota (opcional)" value={note} onChangeText={setNote} placeholder="Ej: aporte mensual, retiro de ganancias" />
-        </Card>
+          <Button title={editing ? 'Guardar cambios' : 'Registrar movimiento'} onPress={submit} loading={saving} />
 
-        <Button title={editing ? 'Guardar cambios' : 'Registrar movimiento'} onPress={submit} loading={saving} />
+          {editing ? (
+            <>
+              <View style={{ height: spacing.sm }} />
+              <Button title="Eliminar movimiento" variant="danger" onPress={confirmDelete} />
+            </>
+          ) : null}
 
-        {editing ? (
-          <>
-            <View style={{ height: spacing.sm }} />
-            <Button title="Eliminar movimiento" variant="danger" onPress={confirmDelete} />
-          </>
-        ) : null}
-
-        <View style={{ height: spacing.xl }} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <View style={{ height: spacing.xl }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.md },
-  label: { color: colors.textMuted, fontSize: 13, fontWeight: '600', marginBottom: 6 },
-  rowWrap: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.sm },
+  section: {
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.md,
+    overflow: 'hidden',
+  },
+  sectionPadding: { padding: spacing.md },
+  sectionTitle: { ...type.micro, color: colors.textMuted, marginBottom: spacing.md },
+  label: { ...type.micro, color: colors.textMuted, marginBottom: 7 },
 });
